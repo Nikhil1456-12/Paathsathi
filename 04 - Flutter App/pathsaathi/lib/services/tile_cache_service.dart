@@ -23,7 +23,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class TileCacheService {
   TileCacheService._();
   static final TileCacheService instance = TileCacheService._();
-  static const _offlineMapInstalledKey = 'offline_map_installed_v1';
+  static const _offlineMapInstalledKey = 'offline_map_installed_v2';
+  static const _legacyOfflineMapInstalledKey = 'offline_map_installed_v1';
 
   final _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 15),
@@ -90,17 +91,30 @@ class TileCacheService {
   /// coordinate, while the bundled overview covers locations without them.
   Future<bool> isOfflineMapInstalled() async {
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_offlineMapInstalledKey) == true) return true;
+    // v1 could be written after a partial/failed download. Never trust it as
+    // proof that an offline map package is complete.
+    await prefs.remove(_legacyOfflineMapInstalledKey);
+    if (prefs.getBool(_offlineMapInstalledKey) != true) return false;
 
     final root = await _tilesRoot();
-    if (!await root.exists()) return false;
+    if (!await root.exists()) {
+      await prefs.remove(_offlineMapInstalledKey);
+      return false;
+    }
+
+    var hasTiles = false;
     await for (final entry in root.list(recursive: true)) {
       if (entry is File && entry.path.toLowerCase().endsWith('.png')) {
-        await prefs.setBool(_offlineMapInstalledKey, true);
-        return true;
+        hasTiles = true;
+        break;
       }
     }
-    return false;
+    if (!hasTiles) {
+      await prefs.remove(_offlineMapInstalledKey);
+      return false;
+    }
+
+    return true;
   }
 
   Future<void> markOfflineMapInstalled() async {
@@ -145,10 +159,13 @@ class TileCacheService {
       if (tiles.isEmpty) return false;
 
       int done = 0;
+      int successfulTiles = 0;
       for (final t in tiles) {
         final (z, x, y) = t;
         final file = await _tileFile(z, x, y);
-        if (!await file.exists()) {
+        if (await file.exists()) {
+          successfulTiles++;
+        } else {
           try {
             final url = _tileUrlTemplate!
                 .replaceAll('{z}', '$z')
@@ -157,6 +174,7 @@ class TileCacheService {
             final resp = await _dio.get<List<int>>(url);
             if (resp.data != null && resp.data!.isNotEmpty) {
               await file.writeAsBytes(resp.data!);
+              successfulTiles++;
             }
           } catch (e) {
             // Skip a failed tile but keep going — partial cache is still useful.
@@ -168,8 +186,12 @@ class TileCacheService {
         done++;
         onProgress?.call(done / tiles.length);
       }
+      if (successfulTiles == 0) {
+        debugPrint('[TileCacheService] no tiles were downloaded successfully');
+        return false;
+      }
       await markOfflineMapInstalled();
-      return true;
+      return successfulTiles == tiles.length;
     } catch (e) {
       debugPrint('[TileCacheService] downloadRegion error: $e');
       return false;
