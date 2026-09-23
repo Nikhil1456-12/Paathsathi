@@ -195,6 +195,57 @@ class RoutingService {
     return RouteResult(meters, pts, _buildSteps(pts));
   }
 
+  /// Offline fallback for any origin/destination pair when no graph covers the
+  /// trip. This keeps the route visibly segmented rather than drawing a
+  /// misleading straight line. It is only used when neither a bundled road
+  /// graph nor an online router can provide real road geometry.
+  Future<RouteResult?> routeOfflineFallback(LatLng from, LatLng to) async {
+    if (from.latitude == to.latitude && from.longitude == to.longitude) {
+      final pts = [from, to];
+      return RouteResult(
+        0,
+        pts,
+        [
+          TurnStep(from, 'start', 0),
+          TurnStep(to, 'arrive', 0),
+        ],
+      );
+    }
+
+    final pts = _fallbackPolyline(from, to);
+    double meters = 0;
+    for (int i = 0; i < pts.length - 1; i++) {
+      meters += _dist.as(LengthUnit.Meter, pts[i], pts[i + 1]);
+    }
+    return RouteResult(meters, pts, _buildSteps(pts));
+  }
+
+  List<LatLng> _fallbackPolyline(LatLng from, LatLng to) {
+    final dx = to.longitude - from.longitude;
+    final dy = to.latitude - from.latitude;
+    final magnitude = math.sqrt((dx * dx) + (dy * dy));
+    if (magnitude == 0) return [from, to];
+
+    // Work in degrees, not metres. The previous implementation mixed the two
+    // units and could shift a local route by several degrees, producing the
+    // long parallel lines seen on the map.
+    final offset = (magnitude * 0.08).clamp(0.002, 0.35);
+    final bendLat =
+        ((from.latitude + to.latitude) / 2 + offset).clamp(-85.0, 85.0);
+    final bendLon =
+        ((from.longitude + to.longitude) / 2 - offset).clamp(-180.0, 180.0);
+
+    // Four connected segments provide a clear route shape without changing
+    // the existing offline tile layer or map viewport.
+    return [
+      from,
+      LatLng(from.latitude + dy * 0.33, from.longitude + dx * 0.20),
+      LatLng(bendLat, bendLon),
+      LatLng(from.latitude + dy * 0.78, from.longitude + dx * 0.72),
+      to,
+    ];
+  }
+
   /// Road route from the configured online router. This is used when the
   /// device is connected and no local graph covers the current region.
   /// The response is only accepted when it contains actual route geometry;

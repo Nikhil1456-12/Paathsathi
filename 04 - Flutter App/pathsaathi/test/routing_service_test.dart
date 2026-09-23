@@ -75,7 +75,8 @@ void main() {
         reason: 'along-path distance can never be shorter than straight-line');
   });
 
-  test('returns null when the start point is outside any loaded graph', () async {
+  test('returns null when the start point is outside any loaded graph',
+      () async {
     // Far away from the fixture bbox → no graph covers it → honest null so the
     // caller falls back to straight-line (labelled approximate).
     final res = await RoutingService.instance.route(
@@ -88,8 +89,8 @@ void main() {
   test('hasGraphFor reflects bbox coverage', () {
     expect(RoutingService.instance.hasGraphFor(const LatLng(0.005, 0.005)),
         isTrue);
-    expect(RoutingService.instance.hasGraphFor(const LatLng(10.0, 10.0)),
-        isFalse);
+    expect(
+        RoutingService.instance.hasGraphFor(const LatLng(10.0, 10.0)), isFalse);
   });
 
   test('produces turn steps that start and arrive', () async {
@@ -100,5 +101,23 @@ void main() {
     expect(res, isNotNull);
     expect(res!.steps.first.maneuver, 'start');
     expect(res.steps.last.maneuver, 'arrive');
+  });
+
+  test('offline fallback is segmented and keeps coordinates near the trip',
+      () async {
+    const start = LatLng(17.72, 83.30);
+    const goal = LatLng(17.77, 83.25);
+    final res = await RoutingService.instance.routeOfflineFallback(start, goal);
+
+    expect(res, isNotNull);
+    expect(res!.points.length, greaterThan(2));
+    expect(res.points.first, start);
+    expect(res.points.last, goal);
+    expect(res.distanceMeters,
+        greaterThan(const Distance().as(LengthUnit.Meter, start, goal)));
+    for (final point in res.points) {
+      expect(point.latitude, inInclusiveRange(17.60, 17.90));
+      expect(point.longitude, inInclusiveRange(83.10, 83.45));
+    }
   });
 }

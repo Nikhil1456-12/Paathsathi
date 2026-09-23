@@ -41,7 +41,9 @@ class STTService {
   /// Initialize STT — requests microphone permission, checks availability
   Future<bool> initialize() async {
     try {
-      final perm = await Permission.microphone.request();
+      // Runtime permission is requested centrally on the first home page.
+      // Do not trigger a second prompt from the listening page.
+      final perm = await Permission.microphone.status;
       if (!perm.isGranted) {
         _lastError = 'Microphone permission denied';
         debugPrint('[STTService] $lastError');
@@ -53,7 +55,8 @@ class STTService {
       _available = await _speech.initialize(
         onError: (err) {
           _lastError = err.errorMsg;
-          debugPrint('[STTService] Speech error: ${err.errorMsg} (permanent: ${err.permanent})');
+          debugPrint(
+              '[STTService] Speech error: ${err.errorMsg} (permanent: ${err.permanent})');
           onErrorCallback?.call(err.errorMsg);
         },
         onStatus: (status) {
@@ -89,7 +92,9 @@ class STTService {
     if (!_available) {
       final ok = await initialize();
       if (!ok) {
-        onError?.call(_lastError.isNotEmpty ? _lastError : 'Speech recognition unavailable');
+        onError?.call(_lastError.isNotEmpty
+            ? _lastError
+            : 'Speech recognition unavailable');
         return false;
       }
     }
@@ -114,7 +119,8 @@ class STTService {
       await _speech.listen(
         onResult: (result) {
           if (result.finalResult) {
-            onConfidence?.call(result.hasConfidenceRating ? result.confidence : 1.0);
+            onConfidence
+                ?.call(result.hasConfidenceRating ? result.confidence : 1.0);
           }
           onResult(result.recognizedWords, result.finalResult);
         },
@@ -175,9 +181,8 @@ class STTService {
     final locales = await _speech.locales();
     final targetCode = _localeMap[langCode] ?? 'en-US';
     final baseLang = targetCode.split('-')[0];
-    return locales.any((l) =>
-      l.localeId == targetCode ||
-      l.localeId.startsWith(baseLang));
+    return locales.any(
+        (l) => l.localeId == targetCode || l.localeId.startsWith(baseLang));
   }
 
   /// Returns download instructions if a language pack is missing

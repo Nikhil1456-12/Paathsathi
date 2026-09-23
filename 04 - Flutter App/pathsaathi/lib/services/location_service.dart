@@ -12,27 +12,35 @@ import 'package:latlong2/latlong.dart';
 
 /// Truthful location states surfaced to the UI. No fake "GPS Lock".
 enum GpsState {
-  idle,               // not started
-  servicesOff,        // device location/GPS turned off
-  permissionDenied,   // user denied (can re-ask)
-  permissionForever,  // permanently denied (must open settings)
-  searching,          // permission ok, waiting for first fix
-  lowAccuracy,        // have a fix but accuracy is poor (> 50 m)
-  ready,              // good fix (<= 50 m)
-  unavailable,        // error / no fix after searching
+  idle, // not started
+  servicesOff, // device location/GPS turned off
+  permissionDenied, // user denied (can re-ask)
+  permissionForever, // permanently denied (must open settings)
+  searching, // permission ok, waiting for first fix
+  lowAccuracy, // have a fix but accuracy is poor (> 50 m)
+  ready, // good fix (<= 50 m)
+  unavailable, // error / no fix after searching
 }
 
 extension GpsStateX on GpsState {
   String get label {
     switch (this) {
-      case GpsState.idle: return 'GPS idle';
-      case GpsState.servicesOff: return 'Location is OFF';
-      case GpsState.permissionDenied: return 'Location permission needed';
-      case GpsState.permissionForever: return 'Enable location in Settings';
-      case GpsState.searching: return 'Searching for GPS…';
-      case GpsState.lowAccuracy: return 'GPS weak (low accuracy)';
-      case GpsState.ready: return 'GPS ready';
-      case GpsState.unavailable: return 'GPS unavailable';
+      case GpsState.idle:
+        return 'GPS idle';
+      case GpsState.servicesOff:
+        return 'Location is OFF';
+      case GpsState.permissionDenied:
+        return 'Location permission needed';
+      case GpsState.permissionForever:
+        return 'Enable location in Settings';
+      case GpsState.searching:
+        return 'Searching for GPS…';
+      case GpsState.lowAccuracy:
+        return 'GPS weak (low accuracy)';
+      case GpsState.ready:
+        return 'GPS ready';
+      case GpsState.unavailable:
+        return 'GPS unavailable';
     }
   }
 
@@ -41,8 +49,8 @@ extension GpsStateX on GpsState {
 
 class LocationSnapshot {
   final GpsState state;
-  final LatLng? position;   // null unless state.hasFix
-  final double? accuracyM;  // metres, null unless fix
+  final LatLng? position; // null unless state.hasFix
+  final double? accuracyM; // metres, null unless fix
   final double? headingDeg; // device heading if available
   final DateTime? at;
 
@@ -90,10 +98,10 @@ class LocationService {
     }
 
     // 2. Permission
-    var perm = await Geolocator.checkPermission();
-    if (perm == LocationPermission.denied) {
-      perm = await Geolocator.requestPermission();
-    }
+    // Runtime permission is requested centrally on the first home page.
+    // Feature pages only inspect the result so they never show a second,
+    // page-specific permission prompt.
+    final perm = await Geolocator.checkPermission();
     if (perm == LocationPermission.deniedForever) {
       _emit(const LocationSnapshot(state: GpsState.permissionForever));
       return GpsState.permissionForever;
@@ -124,7 +132,8 @@ class LocationService {
     await _sub?.cancel();
     const settings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 5, // metres — avoids constant updates while standing still
+      distanceFilter:
+          5, // metres — avoids constant updates while standing still
     );
     _sub = Geolocator.getPositionStream(locationSettings: settings).listen(
       (p) {

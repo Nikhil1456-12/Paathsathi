@@ -162,12 +162,16 @@ class SmartOfflineMapWidget extends ConsumerWidget {
 
     // Priority 3: vector polygon fallback (no FlutterMap GlobalKey conflict).
     // Reached when offline with no cached region/bundle, or when no compliant
-    // source is configured at all.
+    // source is configured at all. Keep the whole world visible on the map so a
+    // trip can be plotted regardless of destination.
     return OfflineMapWidget(
-      initialCenter: userMarker ?? initialCenter,
-      initialZoom: initialZoom,
+      initialCenter: userMarker ?? const LatLng(20.0, 0.0),
+      initialZoom: userMarker != null ? 2.6 : 2.0,
+      sourceMarker: userMarker,
+      destination: destinationMarker ?? initialCenter,
       routePoints: routePoints,
       destinationName: destinationName,
+      markers: [],
     );
   }
 }

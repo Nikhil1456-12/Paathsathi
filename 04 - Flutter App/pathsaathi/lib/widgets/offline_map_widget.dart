@@ -14,6 +14,7 @@ const _saffron = Color(0xFFFF6B00);
 class OfflineMapWidget extends StatefulWidget {
   final LatLng initialCenter;
   final double initialZoom;
+  final LatLng? sourceMarker;
   final LatLng? destination;
   final String? destinationName;
   final String? destinationId;
@@ -27,6 +28,7 @@ class OfflineMapWidget extends StatefulWidget {
     this.initialCenter =
         const LatLng(25.4385, 81.8750), // Prayagraj Kumbh Ground
     this.initialZoom = 15.0,
+    this.sourceMarker,
     this.destination,
     this.destinationName,
     this.destinationId,
@@ -252,6 +254,7 @@ class _OfflineMapWidgetState extends State<OfflineMapWidget> {
   @override
   Widget build(BuildContext context) {
     final targetDest = widget.destination ?? widget.initialCenter;
+    final sourcePoint = widget.sourceMarker ?? widget.initialCenter;
     final isLocalZoom = _currentZoom >= 10.5;
     final isWorldOverview = _currentZoom < 7.0;
     final isNearPrayagraj = _isNearPrayagraj;
@@ -628,6 +631,12 @@ class _OfflineMapWidgetState extends State<OfflineMapWidget> {
     final allMarkers = <Marker>[];
 
     if (!isLocalZoom) {
+      if (sourcePoint != targetDest) {
+        allMarkers.add(_nationalBadge(sourcePoint, 'You 📍', const Color(0xFF2563EB),
+            isPrimary: true));
+      }
+      allMarkers.add(_nationalBadge(targetDest, widget.destinationName ?? 'Destination 🚩',
+          _saffron, isPrimary: true));
       // ── Pan-India Sacred Pilgrimage Hubs (Shown when zoomed out) ────
       allMarkers.addAll([
         _nationalBadge(_sangam, 'Prayagraj (Sangam) 🚩', _saffron,

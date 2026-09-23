@@ -10,6 +10,7 @@
 //   • One-glance Pilgrim Mode card for stressed users.
 //   • Offline map via SmartOfflineMapWidget (MBTiles → OSM → vector fallback).
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -53,6 +54,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     super.initState();
     // Start GPS as soon as the screen opens.
     LocationService.instance.start();
+    _locationSub = LocationService.instance.stream.listen(_onLocationUpdate);
     // Anchor the off-route corridor at the first known position (if any).
     _origin = LocationService.instance.last.position;
     // Load the pre-cached real-street-tile state for the destination so the
@@ -64,6 +66,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   bool _regionTilesCached = false;
   bool _offlineMapInstalled = false;
   bool _checkingTiles = true;
+  StreamSubscription<LocationSnapshot>? _locationSub;
 
   // Offline-tile download state for the honest download UI.
   bool _downloading = false;
@@ -73,7 +76,12 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     final dest = _resolveActiveDestination();
     final root = await TileCacheService.instance.tilesRootPath();
     final installed = await TileCacheService.instance.isOfflineMapInstalled();
-    final cached = await TileCacheService.instance.isRegionCached(dest.coords);
+    // A destination download is useful only when the current source is inside
+    // that cached region. Otherwise a detailed local layer has no tiles at the
+    // user's position and appears as a blank/grey map offline.
+    final source = LocationService.instance.last.position;
+    final cached =
+        await TileCacheService.instance.isRegionCached(source ?? dest.coords);
     if (!mounted) return;
     setState(() {
       _cachedTilesRoot = root;
@@ -81,6 +89,14 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
       _offlineMapInstalled = installed;
       _checkingTiles = false;
     });
+  }
+
+  Future<void> _onLocationUpdate(LocationSnapshot snapshot) async {
+    final position = snapshot.position;
+    if (position == null || _cachedTilesRoot == null) return;
+    final covered = await TileCacheService.instance.isRegionCached(position);
+    if (!mounted || covered == _regionTilesCached) return;
+    setState(() => _regionTilesCached = covered);
   }
 
   /// Download real street tiles for the ACTIVE destination so the map works
@@ -144,6 +160,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
   @override
   void dispose() {
+    _locationSub?.cancel();
     _searchCtrl.dispose();
     TTSService.instance.stop();
     super.dispose();
@@ -185,7 +202,13 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     if (_routeLoading) return;
     _routeLoading = true;
     final localRoute = await RoutingService.instance.route(user, destination);
+    final offlineFallback =
+        localRoute == null &&
+                ConnectivityService.instance.status == ConnectivityStatus.offline
+            ? await RoutingService.instance.routeOfflineFallback(user, destination)
+            : null;
     final route = localRoute ??
+        offlineFallback ??
         (ConnectivityService.instance.status != ConnectivityStatus.offline
             ? await RoutingService.instance.routeOnline(user, destination)
             : null);
