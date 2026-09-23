@@ -585,6 +585,7 @@ class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
                         fontSize: 11, color: const Color(0xFF6B7280))),
                 const SizedBox(height: 6),
                 SizedBox(
+                  width: 100,
                   height: 32,
                   child: ElevatedButton(
                     onPressed: hotel.vacancies == 0
