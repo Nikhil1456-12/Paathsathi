@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Baseline Test Protection Guard",
+      "trigger": "PostFileSave",
+      "description": "Advisory guard fired when a frozen baseline test file is saved. Prompts a check that no test was deleted, skipped, or weakened, protecting the 124-test baseline.",
+      "matcher": "test[\\\\/](destination_resolution_test|pathsaathi_full_suite_test|qa_adversarial_test|qa_kedarnath_test|widget_test)\\.dart$",
+      "action": {
+        "type": "agent",
+        "prompt": "A frozen baseline test file was just modified. The PathSaathi baseline is 124 passing logic tests across 5 files (destination_resolution_test, pathsaathi_full_suite_test, qa_adversarial_test, qa_kedarnath_test, widget_test) and MUST NOT be weakened to obtain a green result.\n\nBefore continuing, verify this change did NOT:\n- remove or reduce the number of test cases,\n- add `skip:` or comment out any `test(`, `testWidgets(`, `group(`, or `expect(`,\n- weaken or delete assertions,\n- relax an expected value to match buggy behavior.\n\nIf the change is an intentional behavior change, it must be documented with (a) the reason, (b) old vs new expected behavior, and (c) evidence of equal-or-greater coverage, per reliability Requirement 1. Then run the affected test file and the full baseline and confirm 100% pass. If any test was weakened without that justification, flag it and stop. This is advisory — do not block unrelated work, only the baseline concern."
+      }
+    }
+  ]
+}

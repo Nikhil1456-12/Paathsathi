@@ -1,0 +1,24 @@
+# Flutter and generated output
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/*.iml
+**/.idea/
+
+# Device/debug artifacts and local crash dumps
+*.log
+hs_err_pid*.log
+replay_pid*.log
+current_phone_screen.png
+navigation_*.png
+offline_*.png
+pathsaathi_*.png
+reopen_cache_check.png
+ui.xml
+**/screen*.png
+**/nav_check.png
+
+# Local tooling and reports that are not product documentation
+**/qa_automation/
+04 - Flutter App/pathsaathi/.kiro/specs/reliability-baseline-device-qa/qa/

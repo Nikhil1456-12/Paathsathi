@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Dart Format + Analyze on Save",
+      "trigger": "PostFileSave",
+      "description": "Formats the saved Dart file and runs flutter analyze (no build) in the Flutter project to keep the 0-warning baseline. Low-cost, deterministic, local-only. Does not build the APK.",
+      "matcher": "lib[\\\\/].*\\.dart$",
+      "action": {
+        "type": "command",
+        "command": "$in = [Console]::In.ReadToEnd(); try { $j = $in | ConvertFrom-Json } catch { $j = $null }; $f = $null; if ($j) { $f = $j.filePath; if (-not $f) { $f = $j.path }; if (-not $f -and $j.file) { $f = $j.file.path } }; $proj = $null; if ($f) { $d = Split-Path -Parent $f; while ($d -and -not (Test-Path (Join-Path $d 'pubspec.yaml'))) { $p = Split-Path -Parent $d; if ($p -eq $d) { break }; $d = $p }; if ($d -and (Test-Path (Join-Path $d 'pubspec.yaml'))) { $proj = $d } }; if ($f -and (Test-Path $f)) { dart format $f | Out-Null }; if ($proj) { Set-Location $proj; flutter analyze --no-pub } else { Write-Output 'skip: no Flutter project (pubspec.yaml) found for saved file' }",
+        "timeout": 120
+      }
+    }
+  ]
+}

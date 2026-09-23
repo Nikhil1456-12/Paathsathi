@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Critical File Modification Warning",
+      "trigger": "PreToolUse",
+      "description": "Advisory PreToolUse guard on write tools. Only raises a concern when the write targets a tightly-scoped set of invariant-critical files; otherwise stays silent. Prevents accidental changes that break protected invariants.",
+      "matcher": "fs_write|str_replace|fs_append",
+      "action": {
+        "type": "agent",
+        "prompt": "A write tool is about to run. Check the target file path. This guard applies ONLY to these tightly-scoped critical files:\\n- lib/services/location_service.dart (truthful GpsState; never fabricate a fix — invariant I5)\\n- lib/services/place_search_service.dart (real coordinates + multilingual aliases; null for non-destinations — invariant I6)\\n- lib/core/voice_strings.dart (selected-language propagation + fallback — invariant I8)\\n- pubspec.yaml (dependency changes)\\n- android/app/build.gradle.kts (R8/ABI release rules)\\n\\nIf the target is NOT one of these files, stay completely silent and let the write proceed unchanged — do not comment.\\n\\nIf the target IS one of these files, before proceeding confirm the change: (1) is intentional and in-scope for the current approved task, (2) does not fabricate GPS/coordinates or invent a destination, (3) does not drop multilingual aliases or a language fallback, (4) for pubspec.yaml/build.gradle, does not add an unpinned/typosquatting dependency or weaken the arm64-v8a/R8 release rules. If any of these is violated, flag it and ask before continuing. This is advisory only; do not block unrelated writes."
+      }
+    }
+  ]
+}

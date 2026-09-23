@@ -1,0 +1,93 @@
+name: pathsaathi
+description: PathSaathi - Vernacular AI Concierge for Pilgrims | Infosys FYP
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # ── Navigation & State ────────────────────────────────────
+  go_router: ^13.2.0
+  flutter_riverpod: ^2.5.1
+
+  # ── UI & Fonts ────────────────────────────────────────────
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.0
+
+  # ── On-Device AI / ONNX Runtime ──────────────────────────
+  # onnxruntime: ^1.2.0     # Phase 2 — MobileBERT NLU + MiniLM (AAR setup needed)
+
+  # ── Audio (ASR input pipeline) ────────────────────────────
+  record: 5.1.2            # Microphone → WAV capture → Whisper ASR (offline). Pinned: newer 5.2.x pulls record_linux 0.7.2 whose interface lags record_platform_interface 1.6.0 and breaks the (all-platform) compile.
+  # just_audio: ^0.9.39     # Phase 2 — TTS playback (Coqui/MMS)
+
+  # ── Document capture (secure on-device vault) ─────────────
+  image_picker: ^1.1.2     # Add ID document photo from gallery/camera → encrypted vault
+
+  # ── Storage ───────────────────────────────────────────────
+  sqflite: ^2.3.3               # Structured transport/event data (offline SQLite)
+  path_provider: ^2.1.3         # App file system (model file storage)
+  flutter_secure_storage: ^9.2.2 # AES-256 document vault + Android Keystore
+
+  # ── Networking & Downloads ────────────────────────────────
+  dio: ^5.5.0+1                 # Chunked model downloads with progress
+  http: ^1.2.1                  # Lightweight HTTP for Fog node LAN + Cloud API calls
+  crypto: ^3.0.3                # SHA-256 model integrity verification
+  connectivity_plus: ^6.0.3     # Detect online/offline state
+
+  # ── Device Info (RAM tier detection) ─────────────────────
+  device_info_plus: ^10.1.0     # Real RAM/tier detection for adaptive model sizing
+
+  # ── Emergency dialer, biometrics ─────────────────────────
+  url_launcher: ^6.3.0          # tel: emergency dialer (108/112/1090)
+  local_auth: ^2.3.0            # Fingerprint/Face unlock for secure documents
+
+  # ── Real on-device GNSS/GPS location (works offline via satellites) ──
+  geolocator: ^12.0.0           # Real device position, permission + service state
+
+  # ── Speech (STT + TTS — Fully Offline via Device Engine) ─────
+  speech_to_text: ^7.0.0        # Offline STT via Android SpeechRecognizer (offline packs)
+  flutter_tts: ^4.2.0           # Offline TTS via Android TTS Engine (hi,te,ta,pa,mr,en)
+  flutter_gemma: ^0.3.0
+  whisper_flutter_new: ^1.0.1
+  onnxruntime: ^1.2.0
+  flutter_map_mbtiles: any
+  permission_handler: ^11.3.0   # Microphone permission request
+
+  # ── Offline Maps & GIS ────────────────────────────────────────
+  flutter_map: ^7.0.2           # Lightweight open-source map renderer
+  latlong2: ^0.9.1              # Geolocation & coordinate calculations
+
+  # ── Local settings ────────────────────────────────────────────
+  shared_preferences: ^2.3.2    # Language, tier, settings persistence
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  sqflite_common_ffi: ^2.3.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/models/
+    - assets/data/
+    - assets/maps/
+
+dependency_overrides:
+  js: ^0.7.1
+  # The `record` 5.x family pins record_platform_interface 1.6.0 (new interface
+  # with named `request`/stream args) but ships record_linux 0.7.2, which still
+  # implements the OLD interface — this breaks the all-platform compile even for
+  # an Android-only build. Force the desktop implementations to versions built
+  # against interface 1.6.0. (We only run on Android; these just need to compile.)
+  record_linux: ^1.0.0
+  record_windows: ^1.0.0
